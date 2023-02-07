@@ -1,7 +1,7 @@
 # PaRot
 
 Official implementation of "PaRot: Patch-Wise Rotation-Invariant Network via Feature Disentanglement and Pose Restoration", AAAI 2023.
-[[Paper]]() [[Supp.]]() [[Video]]()
+[[Paper]](https://patchrot.github.io/index_files/pdfs/AAAI2023_main.pdf) [[Supp.]](https://patchrot.github.io/index_files/pdfs/AAAI2023_supp.pdf) [[Video]](https://PatchRot.github.io)
 
 ![img](img/PaRot.png)
 
@@ -25,7 +25,15 @@ The ModelNet40 and ShapeNetPart dataset will be automatically downloaded. For [S
 ## Citation  
 
 If you find this repo useful in your work or research, please cite:  
-
+```
+@misc{parot,
+  url = {https://arxiv.org/abs/2302.02535},
+  author = {Zhang, Dingxin and Yu, Jianhui and Zhang, Chaoyi and Cai, Weidong},
+  title = {PaRot: Patch-Wise Rotation-Invariant Network via Feature Disentanglement and Pose Restoration},
+  publisher = {arXiv},
+  year = {2023},
+}
+```
 ## Training Command
 
 * For ModelNet40 model train (1024 points)

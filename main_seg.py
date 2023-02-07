@@ -86,12 +86,6 @@ def train(args, io):
     elif args.scheduler == 'multistep':
         scheduler = MultiStepLR(opt, [160, 210], gamma=0.1)
 
-    def count_parameters(model):
-        return sum(p.numel() for p in model.parameters() if p.requires_grad)
-
-    io.cprint("The number of trainable parameters: %.6f(M)" % (count_parameters(model) / (1024 ** 2)))
-
-
     best_acc = 0.0
     best_bal_acc = 0.0
     best_ious = 0.0
