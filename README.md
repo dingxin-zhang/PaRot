@@ -1,4 +1,4 @@
-# PaRot
+# [AAAI 2023] PaRot: Patch-Wise Rotation-Invariant Network via Feature Disentanglement and Pose Restoration
 
 Official implementation of "PaRot: Patch-Wise Rotation-Invariant Network via Feature Disentanglement and Pose Restoration", AAAI 2023.
 [[Paper]](https://patchrot.github.io/index_files/pdfs/AAAI2023_main.pdf) [[Supp.]](https://patchrot.github.io/index_files/pdfs/AAAI2023_supp.pdf) [[Video]](https://PatchRot.github.io)
