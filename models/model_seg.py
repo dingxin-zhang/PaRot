@@ -14,7 +14,7 @@ class SegClassifier(nn.Module):
         super(SegClassifier, self).__init__()
 
         self.device = args.device
-        
+
         self.posembed = nn.Sequential(
             nn.Conv1d(9 + 6 + 1, 32, kernel_size=1, bias=False),
             nn.BatchNorm1d(32),
@@ -237,15 +237,12 @@ class GlobalEncoder(nn.Module):
     def __init__(self, args, C_dim=128):
         super(GlobalEncoder, self).__init__()
         self.k = args.k_global
-        #self.k_local_layer = args.k_local_layer
         self.S = args.local_S
         self.num_points = args.num_points
         self.use_ball_query = args.use_ball_query
 
         # Siamese Training Procedure
         self.disNet = DisentangleNet(args, dim=C_dim)
-
-        # self.layer_encoder = LayerEncoder(C_in=256, C_inter=128, C_out=128)
 
     def forward(self, xyz, local_xyz, train=True):
         local_xyz = local_xyz.contiguous()
@@ -311,9 +308,6 @@ class Model(nn.Module):
         local_feat, new_xyz, (feat1_l, feat2_l), (trot1_l, trot2_l), (dir1_l, dir2_l), (dir1_origin_l, dir2_origin_l) = self.local_enc(xyz, train)
         global_feat, (feat1_g, feat2_g), (trot1_g, trot2_g), (dir1_g, dir2_g), (dir1_origin_g, dir2_origin_g) = self.global_enc(xyz, new_xyz, train)
 
-
-        # fused_feat = torch.cat([local_feat, global_feat], dim=1)  # (B, 128 + 128, N)
-        # fused_feat = fused_feat.transpose(-1, -2).contiguous()
         B, N, _ = new_xyz.size()
 
         ori1_l = get_orientation(dir1_origin_l)  # (BN, 3, 3)

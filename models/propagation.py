@@ -43,9 +43,7 @@ def three_nn(xyz1, xyz2):
     '''
     dists = get_dists(xyz1, xyz2)
     dists, inds = torch.sort(dists, dim=-1)
-    #print(dists.shape)
-    #print(inds.shape)
-    #exit()
+
     dists, inds = dists[:, :, :3], inds[:, :, :3]
     return dists, inds
 
@@ -60,9 +58,7 @@ def get_k_nn(xyz1, xyz2, k):
     '''
     dists = get_dists(xyz1, xyz2)
     dists, inds = torch.sort(dists, dim=-1)
-    #print(dists.shape)
-    #print(inds.shape)
-    #exit()
+
     dists, inds = dists[:, :, :k], inds[:, :, :k]
     return dists, inds
 
@@ -77,18 +73,15 @@ def interpolate_angle(xyz1, xyz2, feature, k):
     '''
     _, _, C2 = feature.shape
     dists, inds = get_k_nn(xyz1, xyz2, k)
-    #print(dists[0][:10])
 
     inversed_dists = 1.0 / (dists + 1e-8)
-    #print(inversed_dists[0][:10])
-    #exit()
+
     weight = inversed_dists / torch.sum(inversed_dists, dim=-1, keepdim=True) # shape=(B, N1, 3)
-    #print(weight.shape)
-    #print(weight[0,:64])
-    weight = torch.unsqueeze(weight, -1)#.repeat(1, 1, 1, C2)
-    #print(weight.shape)
+
+    weight = torch.unsqueeze(weight, -1)
+
     interpolated_feature = gather_points(feature, inds)  # shape=(B, N1, 3, C2)
-    #interpolated_feature = torch.sum(weight * interpolated_feature, dim=2)
+
     return interpolated_feature, inds, weight
 
 
@@ -123,34 +116,14 @@ class FP_Module_root(nn.Module):
         :param points2: shape=(B, N2, C2)
         :return: new_points2: shape = (B, N1, mlp[-1])
         '''
-        #print(xyz1.shape)
-        #print(xyz2.shape)
-        #print(feat1.shape)
-        #print(feat2.shape)
-        #exit()
-        #
 
-        #B, N1, C1 = feat1.shape
-        #_, N2, C2 = feat2.shape
-        #if N2 == 1:
-        #    interpolated_points = feat2.repeat(1, N1, 1)
-        #else:
-        #interpolated_points = three_interpolate(xyz1, xyz2, feat2)
-        #print(feat1.shape)
-        #print(feat2.shape)
         interpolated_points = feat2.repeat(1, feat1.size(1), 1)
-        #exit()
-        #interpolated_points = feat2
+
         if feat1 is not None:
-            #print(interpolated_points.shape, feat1.shape)
             cat_interpolated_points = torch.cat([interpolated_points, feat1], dim=-1).permute(0, 2, 1).contiguous()
         else:
             cat_interpolated_points = interpolated_points.permute(0, 2, 1).contiguous()
-        #print(cat_interpolated_points.shape)
-        #exit()
-        #print(cat_interpolated_points.shape)
-        #print(cat_interpolated_points.shape)
-        #exit()
+
         pos = self.posembed(cat_interpolated_points[:,1280:])
         new_points = self.backbone(torch.cat((cat_interpolated_points[:,:1280], pos), dim=1))
         return new_points.permute(0, 2, 1).contiguous()
@@ -180,34 +153,14 @@ class FP_Module_root_combine(nn.Module):
         :param points2: shape=(B, N2, C2)
         :return: new_points2: shape = (B, N1, mlp[-1])
         '''
-        #print(xyz1.shape)
-        #print(xyz2.shape)
-        #print(feat1.shape)
-        #print(feat2.shape)
-        #exit()
-        #
 
-        #B, N1, C1 = feat1.shape
-        #_, N2, C2 = feat2.shape
-        #if N2 == 1:
-        #    interpolated_points = feat2.repeat(1, N1, 1)
-        #else:
-        #interpolated_points = three_interpolate(xyz1, xyz2, feat2)
-        #print(feat1.shape)
-        #print(feat2.shape)
         interpolated_points = feat2.repeat(1, feat1.size(1), 1)
-        #exit()
-        #interpolated_points = feat2
+
         if feat1 is not None:
-            #print(interpolated_points.shape, feat1.shape)
             cat_interpolated_points = torch.cat([interpolated_points, feat1], dim=-1).permute(0, 2, 1).contiguous()
         else:
             cat_interpolated_points = interpolated_points.permute(0, 2, 1).contiguous()
-        #print(cat_interpolated_points.shape)
-        #exit()
-        #print(cat_interpolated_points.shape)
-        #print(cat_interpolated_points.shape)
-        #exit()
+
         new_points = self.backbone(cat_interpolated_points)
         return new_points.permute(0, 2, 1).contiguous()
 
@@ -244,68 +197,39 @@ class FP_Module_angle_label(nn.Module):
 
         B, N1, C1 = points1.shape
         _, N2, C2 = feat2.shape
-        #if N2 == 1:
-        #    interpolated_points = feat2.repeat(1, N1, 1)
-        #else:
+
         interpolated_feature, inds, inversed_dists = interpolate_angle(xyz1, xyz2, feat2, k)
 
-        #print(xyz2.shape)
         dir1 = dir1.view(-1, N2, 9)
         dir2 = dir2.view(-1, N2, 9)
         close_lrf = gather_points(xyz2, inds)
-        #print(dir1.shape)
+
         dir1 = gather_points(dir1, inds).view(-1, 3, 3)
         dir2 = gather_points(dir2, inds).view(-1, 3, 3)
-        #print(dir1.shape)
+
         relate_position = points1.unsqueeze(2).repeat(1, 1, k, 1)- close_lrf
-        #print(relate_position.shape)
 
         for_dot = F.normalize(relate_position.view(-1, 3), dim=-1).unsqueeze(2)
         angle1 = dir1.matmul(for_dot)
         angle2 = dir2.matmul(for_dot)
-        #print(angle1.shape)
-        #print(angle2.shape)
+
         angle1 = angle1.view(B, N1, k, -1)
         angle2 = angle2.view(B, N1, k, -1)
-        #print(angle1.shape)
 
-        #print(torch.sum(torch.pow(relate_position, 2), dim=-1, keepdim=True).shape)
-        #print(F.normalize(relate_position, dim=-1).shape)
         label = label.unsqueeze(-1).unsqueeze(-1).repeat(1, 1, k, N1)
 
         relative_pos = torch.cat((torch.norm(relate_position, dim=-1, keepdim=True), angle1, angle2), dim=3)
 
         pos = self.posembed(relative_pos.permute(0, 3, 2, 1))
-        #comb_relate = torch.cat((interpolated_feature, torch.sqrt(torch.sum(torch.pow(relate_position, 2), dim=-1, keepdim=True)), angle1, angle2, label), dim = 3)
+
         interpolated_feature = interpolated_feature.permute(0, 3, 2, 1)
 
         cat_interpolated_points = torch.cat((interpolated_feature, pos, label), dim=1)
 
-        #print(comb_relate.shape)
-        #print(label.shape)
-        #print(points1.shape)
-        #print(close_lrf.shape)
-        #print(comb_relate.shape)
-        #print(interpolated_feature.shape)
-
-        #exit()
-        '''
-        if points1 is not None:
-            #print(interpolated_points.shape, feat1.shape)
-            cat_interpolated_points = torch.cat([interpolated_feature, points1], dim=-1).permute(0, 2, 1).contiguous()
-        else:
-        '''
-        #cat_interpolated_points = comb_relate.permute(0, 3, 2, 1)#.contiguous()
-        #print(cat_interpolated_points.shape)
-        #exit()
-        #print(cat_interpolated_points.shape)
         new_points = self.backbone(cat_interpolated_points)
-        #print(new_points.shape)
-        #exit()
+
         new_points = torch.sum(new_points, dim=2)
-        #print(new_points[0])
-        #print(new_points.shape)
-        #exit()
+
         return new_points.permute(0, 2, 1).contiguous()
 
 
@@ -329,7 +253,6 @@ class FP_Module_root_v2(nn.Module):
             in_channels = out_channels
     def forward(self, xyz1, xyz2, feat1, feat2, label):
         '''
-
         :param xyz1: shape=(B, N1, 3)
         :param xyz2: shape=(B, N2, 3)   (N1 >= N2)
         :param points1: shape=(B, N1, C1)
