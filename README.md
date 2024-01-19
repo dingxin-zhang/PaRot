@@ -26,12 +26,15 @@ The ModelNet40 and ShapeNetPart dataset will be automatically downloaded. For [S
 
 If you find this repo useful in your work or research, please cite:  
 ```
-@misc{parot,
-  url = {https://arxiv.org/abs/2302.02535},
-  author = {Zhang, Dingxin and Yu, Jianhui and Zhang, Chaoyi and Cai, Weidong},
-  title = {PaRot: Patch-Wise Rotation-Invariant Network via Feature Disentanglement and Pose Restoration},
-  publisher = {arXiv},
-  year = {2023},
+@article{Zhang_Yu_Zhang_Cai_2023,
+title={PaRot: Patch-Wise Rotation-Invariant Network via Feature Disentanglement and Pose Restoration},
+author={Zhang, Dingxin and Yu, Jianhui and Zhang, Chaoyi and Cai, Weidong},
+journal={Proceedings of the AAAI Conference on Artificial Intelligence},
+volume={37}, 
+number={3},
+year={2023},
+month={Jun.},
+pages={3418-3426}
 }
 ```
 ## Training Command
