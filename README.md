@@ -3,6 +3,8 @@
 Official implementation of "PaRot: Patch-Wise Rotation-Invariant Network via Feature Disentanglement and Pose Restoration", AAAI 2023.
 [[Paper]](https://patchrot.github.io/index_files/pdfs/AAAI2023_main.pdf) [[Supp.]](https://patchrot.github.io/index_files/pdfs/AAAI2023_supp.pdf) [[Video]](https://PatchRot.github.io)
 
+We've optimized the code and released more experimental data, including class mIoU and instance mIoU, to facilitate comparisons with other methods and enable further analysis.
+
 ![img](img/PaRot.png)
 
 ## Requirements
@@ -10,17 +12,26 @@ Official implementation of "PaRot: Patch-Wise Rotation-Invariant Network via Fea
 * Python 3.7
 * Pytorch 1.10
 * CUDA 10.2
-* Packages: pytorch3d, tqdm, sklearn, visualdl
+* Packages: pytorch3d, tqdm, sklearn, visualdl, opencv-python
 
 ## Data
 
 The ModelNet40 and ShapeNetPart dataset will be automatically downloaded. For [ScanObjectNN](https://hkust-vgd.github.io/scanobjectnn/), you need to fill out an agreement to get the download link.
 
 ## Performance
+* Accuracy on **ModelNet40** under rotation: <b>91.0%</b> (z/SO(3)), <b>90.8%</b> (SO(3)/SO(3)).
+* Accuracy on **ScanObjectNN** OBJ_BG classification under rotation:
 
-* Accuracy on ModelNet40 under rotation: <b>91.0%</b> (z/SO(3)), <b>90.8%</b> (SO(3)/SO(3)).
-* Accuracy on ScanObjectNN OBJ_BG classification under rotation: <b>82.1%</b> (z/SO(3)), <b>82.6%</b> (SO(3)/SO(3)).
-* Averaged mIoU on ShapeNetPart segmentation under rotation: <b>79.2%</b> (z/SO(3)).
+| z/z | z/SO(3)  | SO(3)/SO(3) |
+| :---: | :---: | :---: |
+| 82.4% | 82.1% | 82.6% |
+
+* Averaged mIoU on **ShapeNetPart segmentation** under rotation: 
+ 
+| |z/z | z/SO(3)  | SO(3)/SO(3) |
+| :--- |:---: | :---: | :---: |
+| Class mIOU | 79.1% | 79.2% | 79.5% |
+| Insta. mIOU | 82.8% | 82.9% | 82.8% |
 
 ## Citation  
 
