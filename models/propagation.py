@@ -1,22 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-def get_dists(points1, points2):
-    '''
-    Calculate dists between two group points
-    :param cur_point: shape=(B, M, C)
-    :param points: shape=(B, N, C)
-    :return:
-    '''
-    B, M, C = points1.shape
-    _, N, _ = points2.shape
-    dists = torch.sum(torch.pow(points1, 2), dim=-1).view(B, M, 1) + \
-            torch.sum(torch.pow(points2, 2), dim=-1).view(B, 1, N)
-    dists -= 2 * torch.matmul(points1, points2.permute(0, 2, 1))
-    dists = torch.where(dists < 0, torch.ones_like(dists) * 1e-7, dists) # Very Important for dist = 0.
-    return torch.sqrt(dists).float()
-
+from pytorch3d.ops import knn_points
 
 def gather_points(points, inds):
     '''
@@ -34,35 +19,6 @@ def gather_points(points, inds):
     batchlists = torch.arange(0, B, dtype=torch.long).to(device).reshape(inds_shape).repeat(repeat_shape)
     return points[batchlists, inds, :]
 
-def three_nn(xyz1, xyz2):
-    '''
-
-    :param xyz1: shape=(B, N1, 3)
-    :param xyz2: shape=(B, N2, 3)
-    :return: dists: shape=(B, N1, 3), inds: shape=(B, N1, 3)
-    '''
-    dists = get_dists(xyz1, xyz2)
-    dists, inds = torch.sort(dists, dim=-1)
-
-    dists, inds = dists[:, :, :3], inds[:, :, :3]
-    return dists, inds
-
-
-
-def get_k_nn(xyz1, xyz2, k):
-    '''
-
-    :param xyz1: shape=(B, N1, 3)
-    :param xyz2: shape=(B, N2, 3)
-    :return: dists: shape=(B, N1, 3), inds: shape=(B, N1, 3)
-    '''
-    dists = get_dists(xyz1, xyz2)
-    dists, inds = torch.sort(dists, dim=-1)
-
-    dists, inds = dists[:, :, :k], inds[:, :, :k]
-    return dists, inds
-
-
 def interpolate_angle(xyz1, xyz2, feature, k):
     '''
 
@@ -71,8 +27,8 @@ def interpolate_angle(xyz1, xyz2, feature, k):
     :param feature: shape=(B, N2, C2)
     :return: interpolated_points: shape=(B, N1, C2)
     '''
-    _, _, C2 = feature.shape
-    dists, inds = get_k_nn(xyz1, xyz2, k)
+
+    dists, inds, _ = knn_points(xyz1, xyz2, K=k, return_nn=True)
 
     inversed_dists = 1.0 / (dists + 1e-8)
 

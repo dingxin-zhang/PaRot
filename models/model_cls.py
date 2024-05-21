@@ -5,8 +5,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from util import cal_loss
 from models.model_util import get_graph_feature_three_dir, get_random_rot, index_points, get_dir_loss, \
-    get_orth_loss, knn_point, get_orientation
-from models.model_util import furthest_point_sample as fps
+    get_orth_loss, get_orientation 
+from pytorch3d.ops import sample_farthest_points as fps
+from pytorch3d.ops import knn_points
 
 class Classifier(nn.Module):
     def __init__(self, args, output_channels=40):
@@ -169,19 +170,16 @@ class LocalEncoder(nn.Module):
     def forward(self, xyz, train=True):
         xyz = xyz.contiguous()
         if self.num_points != 1024:
-            fps_idx = fps(xyz, self.num_points).long()  # (B, 1024, 3)
-            xyz = index_points(xyz, fps_idx)
+            xyz, fps_idx = fps(xyz, K=self.num_points)      # (B, 1024, 3)
 
-        fps_idx = fps(xyz, self.S).long()
-        new_xyz = index_points(xyz, fps_idx)  # (B, 128, 3)
+        new_xyz, fps_idx = fps(xyz, K=self.S)       # (B, 128, 3)
 
         if self.use_ball_query:
             idx = ball_query(xyz, new_xyz, radius, self.k)
             x = index_points(xyz, idx)
             x -= torch.unsqueeze(new_xyz, 2).repeat(1, 1, self.k, 1)
         else:
-            knn_idx = knn_point(self.k, xyz, new_xyz)
-            grouped_xyz = index_points(xyz, knn_idx)  # (B, S, K, 3)
+            dist, knn_idx, grouped_xyz = knn_points(new_xyz, xyz, K=self.k, return_nn=True)  # (B, S, K, 3)
             x = grouped_xyz - new_xyz.unsqueeze(2)
 
         M_xyz = x.reshape(-1, self.k, 3)  # (B * S, K, 3)
@@ -224,8 +222,7 @@ class GlobalEncoder(nn.Module):
         if self.S == self.k:
             grouped_xyz = local_xyz.unsqueeze(1).repeat(1, self.S, 1, 1)
         else:
-            fps_idx = fps(xyz, self.k).long()  # (B, 1024, 3)
-            global_xyz = index_points(xyz, fps_idx)
+            global_xyz, fps_idx = fps(xyz, K=self.k)    # (B, 1024, 3)
             grouped_xyz = global_xyz.unsqueeze(1).repeat(1, self.S, 1, 1)
 
         grouped_xyz = grouped_xyz - local_xyz.unsqueeze(2)
@@ -288,7 +285,7 @@ class Model(nn.Module):
 
         B, N, _ = new_xyz.size()
 
-        ori1_l = get_orientation(dir1_origin_l)  # (BN, 3, 3)
+        ori1_l = get_orientation(dir1_origin_l) # (BN, 3, 3)
         ori2_l = get_orientation(dir2_origin_l)
         ori1_g = get_orientation(dir1_origin_g)
         ori2_g = get_orientation(dir2_origin_g)

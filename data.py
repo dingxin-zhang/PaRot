@@ -1,13 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""
-@Author: Yue Wang
-@Contact: yuewangx@mit.edu
-@File: data.py
-@Time: 2018/10/13 6:21 PM
-"""
-
-
 import os
 import sys
 import glob
@@ -140,30 +130,6 @@ def translate_pointcloud_scale(pointcloud, scale1, scale2):
     xyz1 = np.random.uniform(low=scale1/scale2, high=scale2/scale1, size=[3])
     translated_pointcloud = np.multiply(pointcloud, xyz1).astype('float32')
     return translated_pointcloud
-
-
-def farthest_point_sample(point, npoint):
-    """
-    Input:
-        xyz: pointcloud data, [N, D]
-        npoint: number of samples
-    Return:
-        centroids: sampled pointcloud index, [npoint, D]
-    """
-    N, D = point.shape
-    xyz = point[:,:3]
-    centroids = np.zeros((npoint,))
-    distance = np.ones((N,)) * 1e10
-    farthest = np.random.randint(0, N)
-    for i in range(npoint):
-        centroids[i] = farthest
-        centroid = xyz[farthest, :]
-        dist = np.sum((xyz - centroid) ** 2, -1)
-        mask = dist < distance
-        distance[mask] = dist[mask]
-        farthest = np.argmax(distance, -1)
-    point = point[centroids.astype(np.int32)]
-    return point
 
 
 class ModelNet40(Dataset):

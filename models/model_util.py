@@ -1,67 +1,7 @@
-import os
-import sys
-import copy
-import math
 import torch
-import numpy as np
-import torch.nn as nn
-import torch.nn.init as init
 import torch.nn.functional as F
 from pytorch3d.transforms import Rotate, random_rotations
-
-
-def get_dists(points1, points2):
-    '''
-    Calculate dists between two group points
-    :param cur_point: shape=(B, M, C)
-    :param points: shape=(B, N, C)
-    :return:
-    '''
-    B, M, C = points1.shape
-    _, N, _ = points2.shape
-    dists = torch.sum(torch.pow(points1, 2), dim=-1).view(B, M, 1) + \
-            torch.sum(torch.pow(points2, 2), dim=-1).view(B, 1, N)
-    dists -= 2 * torch.matmul(points1, points2.permute(0, 2, 1))
-    dists = torch.where(dists < 0, torch.ones_like(dists) * 1e-7, dists) # Very Important for dist = 0.
-    return torch.sqrt(dists).float()
-
-def ball_query(xyz, new_xyz, radius, K):
-    '''
-    :param xyz: shape=(B, N, 3)
-    :param new_xyz: shape=(B, M, 3)
-    :param radius: int
-    :param K: int, an upper limit samples
-    :return: shape=(B, M, K)
-    '''
-    device = xyz.device
-    B, N, C = xyz.shape
-    M = new_xyz.shape[1]
-    grouped_inds = torch.arange(0, N, dtype=torch.long).to(device).view(1, 1, N).repeat(B, M, 1)
-    dists = get_dists(new_xyz, xyz)
-    grouped_inds[dists > radius] = N  # change to 1024
-    grouped_inds = torch.sort(grouped_inds, dim=-1)[0][:, :, :K]
-
-    grouped_min_inds = grouped_inds[:, :, 0:1].repeat(1, 1, K)
-
-
-    grouped_inds[grouped_inds == N] = grouped_min_inds[grouped_inds == N]
-
-    return grouped_inds
-
-
-def square_distance(src, dst):
-    B, N, _ = src.shape
-    _, M, _ = dst.shape
-    dist = -2 * torch.matmul(src, dst.permute(0, 2, 1))
-    dist += torch.sum(src ** 2, -1).view(B, N, 1)
-    dist += torch.sum(dst ** 2, -1).view(B, 1, M)
-    return dist
-
-
-def knn_point(k, xyz, new_xyz):
-    sqrdists = square_distance(new_xyz, xyz)  # [B, S, N]
-    _, group_idx = torch.topk(sqrdists, k, dim=-1, largest=False, sorted=True)  # [B, S, 2K]
-    return group_idx
+from pytorch3d.ops import knn_points
 
 
 def index_points(points, idx) -> torch.Tensor:
@@ -76,49 +16,14 @@ def index_points(points, idx) -> torch.Tensor:
     return new_points
 
 
-def edgeConv(xyz, feat, k=20, dynamic=True):
-    # x: (B, N, 3), feat: (B, N, C)
-    if dynamic:
-        knn_idx = knn_point(k, feat, feat)  # (B, N, K)
-    else:
-        knn_idx = knn_point(k, xyz, xyz)  # (B, N, K)
-
-    grouped_feat = index_points(feat, knn_idx)  # (B, N, K, C)
-    normed_group_feat = grouped_feat - feat.unsqueeze(-2)  # (B, N, K, C)
-    feature = torch.cat([grouped_feat, normed_group_feat], dim=-1)  # (B, N, K, C)
-
-    return feature.permute(0, 3, 1, 2).contiguous()
-
-def furthest_point_sample(xyz, npoint):
-    """
-    Input:
-        xyz: pointcloud data, [B, N, 3]
-        npoint: number of samples
-    Return:
-        centroids: sampled pointcloud index, [B, npoint]
-    """
-    device = xyz.device
-    B, N, C = xyz.shape
-    centroids = torch.zeros(B, npoint, dtype=torch.long).to(device)
-    distance = torch.ones(B, N).to(device) * 1e10
-    farthest = torch.randint(0, N, (B,), dtype=torch.long).to(device)
-    batch_indices = torch.arange(B, dtype=torch.long).to(device)
-    for i in range(npoint):
-        centroids[:, i] = farthest
-        centroid = xyz[batch_indices, farthest, :].view(B, 1, 3)
-        dist = torch.sum((xyz - centroid) ** 2, -1)
-        mask = dist < distance
-        distance[mask] = dist[mask]
-        farthest = torch.max(distance, -1)[1]
-    return centroids
-
 def get_graph_feature_three_dir(center_xyz, feat, k=20):
     # x: (B, N, 3), feat: (B, N, C)
     center_xyz = center_xyz.contiguous()
     batch_size, num_points = center_xyz.size()[:2]
 
-    knn_idx = knn_point(k, center_xyz, center_xyz)  # (B, N, K)
-    grouped_xyz = index_points(center_xyz, knn_idx)  # (B, N, K, 3)
+    __, knn_idx, grouped_xyz = knn_points(center_xyz, center_xyz, K=k, return_nn=True) #  __ ,(B, N, K), (B, N, K, 3)
+    
+    # grouped_xyz = index_points(center_xyz, knn_idx)  # (B, N, K, 3)
     grouped_feat = index_points(feat, knn_idx)  # (B, N, K, C)
 
     dir_xy = feat[..., -6:].view(batch_size, num_points, 1, 2, 3)  # (B, N, 1, 2, 3)
