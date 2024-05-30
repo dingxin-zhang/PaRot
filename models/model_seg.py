@@ -198,9 +198,9 @@ class LocalEncoder(nn.Module):
     def forward(self, xyz, train=True):
         xyz = xyz.contiguous()
         if self.num_points != 2048:
-            xyz, fps_idx = fps(xyz, K=self.num_points)  # (B, 1024, 3)
+            xyz, fps_idx = fps(xyz, K=self.num_points, random_start_point=True)  # (B, 1024, 3)
 
-        new_xyz, fps_idx = fps(xyz, K=self.S)   # (B, 128, 3)
+        new_xyz, fps_idx = fps(xyz, K=self.S, random_start_point=True)   # (B, 128, 3)
 
         if self.use_ball_query:
             idx = ball_query(xyz, new_xyz, radius, self.k)
@@ -249,7 +249,7 @@ class GlobalEncoder(nn.Module):
         if self.S == self.k:
             grouped_xyz = local_xyz.unsqueeze(1).repeat(1, self.S, 1, 1)
         else:
-            global_xyz, fps_idx = fps(xyz, K=self.k)    # (B, 1024, 3)
+            global_xyz, fps_idx = fps(xyz, K=self.k, random_start_point=True)    # (B, 1024, 3)
             grouped_xyz = global_xyz.unsqueeze(1).repeat(1, self.S, 1, 1)
 
         grouped_xyz = grouped_xyz - local_xyz.unsqueeze(2)
